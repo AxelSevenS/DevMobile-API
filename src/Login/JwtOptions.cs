@@ -9,7 +9,7 @@ namespace Kredit;
 public record class JwtOptions
 {
     public const string Jwt = "Jwt";
-	public static readonly string RoleClaim = "roles";
+	public const string RoleClaim = "roles";
 
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;

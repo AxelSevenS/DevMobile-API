@@ -16,7 +16,6 @@ public abstract class Controller<T, TData>(T repository) : ControllerBase where 
 	protected bool TryGetAuthenticatedUserId(out uint id)
 	{
 		id = 0;
-		Console.WriteLine(string.Join(", ", HttpContext.User.Claims));
 		if (
 			HttpContext.User.FindFirst(JwtRegisteredClaimNames.Sub) is Claim claim && 
 			uint.TryParse(claim.Value, out id)

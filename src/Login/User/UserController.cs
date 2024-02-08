@@ -1,14 +1,16 @@
-using System.Text.Json;
+using ApiSevenet;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 
 namespace ApiSevenet;
 
 [ApiController]
 [Route("api/users")]
-public class UserController(UserRepository repository) : Controller<UserRepository, User>(repository)
+public class UserController(UserRepository repo, JwtOptions jwtOptions) : Controller<UserRepository, User>(repo)
 {
-
 	/// <summary>
 	/// Get all users
 	/// </summary>
@@ -16,10 +18,8 @@ public class UserController(UserRepository repository) : Controller<UserReposito
 	/// All users
 	/// </returns>
 	[HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetAll()
-    {
-        return Ok(await repository.GetUsers());
-    }
+    public async Task<List<User>> GetAll() =>
+		[.. await repository.GetUsers()];
 
     /// <summary>
     /// Get a user by id
@@ -29,19 +29,12 @@ public class UserController(UserRepository repository) : Controller<UserReposito
     /// The user with the given id
     /// </returns>
     [HttpGet("{id}")]
-    public async Task<ActionResult<User>> GetById(string id)
-    {
-        if ( ! Guid.TryParse(id, out Guid guid) && guid == Guid.Empty)
+    public async Task<ActionResult<User>> GetById(uint id) =>
+		await repository.GetUserById(id) switch
         {
-            return BadRequest();
-        }
-
-        return await repository.GetUserById(guid) switch
-        {
-            null => NotFound(),
             User user => Ok(user),
+            null => NotFound(),
         };
-    }
 
     /// <summary>
     /// Authenticate a user
@@ -50,18 +43,18 @@ public class UserController(UserRepository repository) : Controller<UserReposito
     /// <param name="password">The password of the user</param>
     /// <returns>
     /// The JWT token of the user,
-    ///     or NotFound if the user does not exist,
-    ///     or BadRequest if the username/password is incorrect
+    ///     or NotFound if the user does not exist
     /// </returns>
     [HttpPost("auth")]
     public async Task<ActionResult> AuthenticateUser([FromForm]string username, [FromForm]string password)
-    {
-		return await repository.GetUserByUsernameAndPassword(username, JWT.HashPassword(password)) switch
+	{
+		password = jwtOptions.HashPassword(password);
+		return await repository.GetUserByUsernameAndPassword(username, password) switch
         {
-            OkObjectResult res when res.Value is User user => Ok(JsonSerializer.Serialize(JWT.Generate(user).ToString())),
-			ActionResult res => res
+            User user => Ok( jwtOptions.GenerateFrom(user).Write() ),
+            null => NotFound(),
         };
-    }
+	}
 
     /// <summary>
     /// Register a user
@@ -75,19 +68,21 @@ public class UserController(UserRepository repository) : Controller<UserReposito
     [HttpPut]
     public async Task<ActionResult<User>> RegisterUser([FromForm]string username, [FromForm]string password)
     {
-        User? result = await repository.PostUser( new()
+        User? result = await repository.PostUser( 
+			new()
 			{
 				Username = username,
-				Password = JWT.HashPassword(password)
-			});
+				Password = jwtOptions.HashPassword(password)
+			}
+		);
 
-        if (result is null)
+        if (result is not User user)
         {
             return BadRequest();
         }
 
         repository.SaveChanges();
-        return Ok(result);
+        return Ok(user);
     }
 
     /// <summary>
@@ -99,21 +94,57 @@ public class UserController(UserRepository repository) : Controller<UserReposito
     /// The updated user
     /// </returns>
     [HttpPut("{id}")]
-    public async Task<ActionResult<User>> UpdateUser(string id, [FromForm] User user)
+	[Authorize]
+    public async Task<ActionResult<User>> UpdateUser(uint id, [FromForm] User user)
     {
-        if ( (! Guid.TryParse(id, out Guid guid) && guid == Guid.Empty) || user is null)
+        if (user is null)
         {
             return BadRequest();
         }
+		
+		if ( ! VerifyOwnershipOrAuthZ(id, out ActionResult<User> error))
+		{
+			return error;
+		}
 
-        User? result = await repository.PutUserById(guid, user);
-        if (result is null)
+		User? current = await repository.GetUserById(id);
+        if ( current is null )
         {
             return NotFound();
         }
 
+		User? updated = await repository.PutUserById(id, current.WithUpdatesFrom(user) );
+
         repository.SaveChanges();
-        return Ok(result);
+        return Ok(updated);
+    }
+
+    /// <summary>
+    /// Update a user's authorizations
+    /// </summary>
+    /// <param name="id">The id of the user</param>
+    /// <param name="user">The user to update</param>
+    /// <returns>
+    /// The updated user
+    /// </returns>
+    [HttpPut("auths/{id}")]
+	[Authorize]
+    public async Task<ActionResult<User>> UpdateUserAuths(uint id, [FromForm] bool admin)
+    {
+		if ( ! VerifyOwnershipOrAuthZ(id, out ActionResult<User> error))
+		{
+			return error;
+		}
+
+		User? current = await repository.GetUserById(id);
+        if ( current is null )
+        {
+            return NotFound();
+        }
+		current.Admin = admin;
+
+        repository.SaveChanges();
+        return Ok(current);
     }
 
     /// <summary>
@@ -124,20 +155,23 @@ public class UserController(UserRepository repository) : Controller<UserReposito
     /// The deleted user
     /// </returns>
     [HttpDelete("{id}")]
-    public async Task<ActionResult<User>> DeleteUser(string id)
+	[Authorize]
+    public async Task<ActionResult<User>> DeleteUser(uint id)
     {
-        if ( ! Guid.TryParse(id, out Guid guid) && guid == Guid.Empty)
-        {
-            return BadRequest();
-        }
+		if ( ! VerifyOwnershipOrAuthZ(id, out ActionResult<User> error))
+		{
+			return error;
+		}
 
-        User? result = await repository.DeleteUserById(guid);
-        if (result is null)
+		User? current = await repository.GetUserById(id);
+        if ( current is null )
         {
             return NotFound();
         }
 
+        User? deleted = await repository.DeleteUserById(id);
+
         repository.SaveChanges();
-        return Ok(result);
+        return Ok(deleted);
     }
 }

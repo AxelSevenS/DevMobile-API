@@ -1,11 +1,22 @@
+using System.Text.Json.Serialization;
+
 namespace ApiSevenet;
 
 public record Media
 {
-    public Guid Id { get; set; }
-    public Guid Author { get; set; }
+	[JsonPropertyName("id")]
+    public uint Id { get; set; }
+
+	[JsonPropertyName("author-id")]
+    public uint AuthorId { get; set; }
+	
+	[JsonPropertyName("name")]
     public string? Name { get; set; }
+	
+	[JsonPropertyName("description")]
     public string? Description { get; set; }
+	
+	[JsonPropertyName("extension")]
     public string Extension { get; set; } = ".png";
 	
 

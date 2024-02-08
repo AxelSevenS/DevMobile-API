@@ -9,14 +9,23 @@ namespace ApiSevenet;
 public class UserRepository : Repository<User>
 {
     public static readonly string fileName = "users.json";
+	private JwtOptions JwtOptions { get; init; }
 
 
-    public UserRepository() : base(fileName) {
+	public override uint NewId => (Data.MaxBy(u => u.Id)?.Id ?? 0) + 1;
+
+
+
+	public UserRepository(JwtOptions jwtOptions) : base(fileName)
+	{
+		JwtOptions = jwtOptions;
 		Task.Run(async () => {
-			if (Data.Count == 0) {
-				await PostUser(new() {
+			if ( ! Data.Any(u => ! u.Admin) )
+			{
+				await PostUser(new()
+				{
 					Username = "Admin",
-					Password = JWT.HashPassword("AdminPassword"),
+					Password = JwtOptions.HashPassword("AdminPassword"),
 					Admin = true,
 				});
 			}
@@ -24,10 +33,12 @@ public class UserRepository : Repository<User>
 		});
 	}
 
-    /// <summary>
-    /// Save the data to the file
-    /// </summary>
-    public override void SaveChanges()
+
+
+	/// <summary>
+	/// Save the data to the file
+	/// </summary>
+	public override void SaveChanges()
     {
         string jsonString = JsonSerializer.Serialize(Data);
         File.WriteAllText(fileName, jsonString);
@@ -40,11 +51,8 @@ public class UserRepository : Repository<User>
     /// <returns>
     /// All users
     /// </returns>
-    public async Task<IEnumerable<User>> GetUsers()
-    {
-		Console.WriteLine(string.Join(", ", Data.Select(u => u.Username)));
-        return await Task.Run(() => Data);
-    }
+    public async Task<IEnumerable<User>> GetUsers() =>
+        await Task.Run(() => Data);
 
     /// <summary>
     /// Get a user by id
@@ -53,7 +61,7 @@ public class UserRepository : Repository<User>
     /// <returns>
     /// The user with the given id
     /// </returns>
-    public async Task<User?> GetUserById(Guid id)
+    public async Task<User?> GetUserById(uint id)
     {
         return await Task.Run(() => Data.FirstOrDefault(u => u.Id == id));
     }
@@ -66,18 +74,10 @@ public class UserRepository : Repository<User>
     /// <returns>
     /// The user with the given username and password
     /// </returns>
-    public async Task<ActionResult> GetUserByUsernameAndPassword(string username, string password)
-    {
-        return await Task.Run( () =>
-			Data.Where(u => u.Username == username).ToArray() switch {
-				[] => new NotFoundResult() as ActionResult,
-				[.. User[] users] => users.Where(u => u.Password == password).FirstOrDefault() switch {
-					User user => new OkObjectResult(user),
-					_ => new UnauthorizedResult(),
-				},
-			}
+    public async Task<User?> GetUserByUsernameAndPassword(string username, string password) =>
+		await Task.Run( () =>
+			Data.FirstOrDefault(u => u.Username == username && u.Password == password)
 		);
-    }
 
     /// <summary>
     /// Verify a user
@@ -108,7 +108,7 @@ public class UserRepository : Repository<User>
                 return null;
             }
 
-            user.Id = Guid.NewGuid();
+            user.Id = NewId;
             Data.Add(user);
             
             return user;
@@ -126,7 +126,7 @@ public class UserRepository : Repository<User>
     /// <returns>
     /// The user with the given id
     /// </returns>
-    public async Task<User?> PutUserById(Guid id, User user)
+    public async Task<User?> PutUserById(uint id, User user)
     {
         if (user is null) return null;
 
@@ -139,7 +139,7 @@ public class UserRepository : Repository<User>
                 oldUser = Data[Data.IndexOf(oldUser)] = oldUser with
                 {
                     Username = user.Username ?? oldUser.Username,
-                    Password = user.Password is string newPass ? JWT.HashPassword(newPass) : oldUser.Password,
+                    Password = user.Password is string newPass ? JwtOptions.HashPassword(newPass) : oldUser.Password,
                 };
             }
 
@@ -157,7 +157,7 @@ public class UserRepository : Repository<User>
     /// <returns>
     /// The deleted user
     /// </returns>
-    public async Task<User?> DeleteUserById(Guid id)
+    public async Task<User?> DeleteUserById(uint id)
     {
         return await Task.Run(() =>
         {

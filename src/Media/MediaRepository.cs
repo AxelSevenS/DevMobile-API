@@ -11,8 +11,9 @@ public class MediaRepository : Repository<Media>
     public static readonly string fileDirectory = "Resources/Media";
     public static readonly string fileName = "data.json";
 
+	public override uint NewId => (Data.MaxBy(m => m.Id)?.Id ?? 0) + 1;
 
-    public MediaRepository() : base(fileName) {}
+	public MediaRepository() : base(fileName) {}
 
 
     /// <summary>
@@ -45,7 +46,7 @@ public class MediaRepository : Repository<Media>
     /// <returns>
     /// The product with the given id
     /// </returns>
-    public async Task<Media?> GetMediaById(Guid id)
+    public async Task<Media?> GetMediaById(uint id)
     {
         return await Task.Run(() => Data.FirstOrDefault(x => x.Id == id));
     }
@@ -60,9 +61,9 @@ public class MediaRepository : Repository<Media>
     /// <returns>
     /// The product with the given id
     /// </returns>
-    public async Task<IEnumerable<Media?>> GetMediaByAuthorId(Guid id)
+    public async Task<IEnumerable<Media?>> GetMediaByAuthorId(uint id)
     {
-        return await Task.Run(() => Data.Where(x => x.Author == id));
+        return await Task.Run(() => Data.Where(x => x.AuthorId == id));
     }
 
     /// <summary>
@@ -103,7 +104,7 @@ public class MediaRepository : Repository<Media>
     /// <returns>
     /// The updated product
     /// </returns>
-    public async Task<Media?> UpdateMedia(Guid id, Media product)
+    public async Task<Media?> UpdateMedia(uint id, Media product)
     {
         Media? productToUpdate = await GetMediaById(id);
         if (productToUpdate is not null)
@@ -128,7 +129,7 @@ public class MediaRepository : Repository<Media>
     /// <returns>
     /// The deleted product
     /// </returns>
-    public async Task<Media?> DeleteMedia(Guid id)
+    public async Task<Media?> DeleteMedia(uint id)
     {
         Media? product = await GetMediaById(id);
         if (product is not null)

@@ -1,6 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
-using static ApiSevenet.JWT;
 
 namespace ApiSevenet;
 
@@ -8,21 +8,11 @@ namespace ApiSevenet;
 [Route("api/media")]
 public class MediaController(MediaRepository repository) : Controller<MediaRepository, Media>(repository)
 {
-	private static readonly string[] acceptedTypes = [
-		"image/jpeg",
-		"image/png",
-		"image/gif",
-		"audio/x-wav",
-		"audio/mp3",
-		"audio/ogg",
-		"audio/webm",
-		"video/mp4",
-		"video/webm",
-		"video/x-msvideo",
-		"video/mpeg",
-		"video/ogg",
-	];
 
+	private static bool CheckFileValidity(IFormFile file)
+	{
+		return file.ContentType.StartsWith("audio") || file.ContentType.StartsWith("video") || file.ContentType.StartsWith("image");
+	}
 
     /// <summary>
     /// Get all media
@@ -44,15 +34,8 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// The media with the given id
     /// </returns>
     [HttpGet("{id}")]
-    public async Task<ActionResult<Media?>> GetById(string id)
-    {
-        if ( ! Guid.TryParse(id, out Guid guid) && guid == Guid.Empty)
-        {
-            return BadRequest();
-        }
-
-		return await repository.GetMediaById(guid);
-    }
+    public async Task<ActionResult<Media?>> GetById(uint id) =>
+		await repository.GetMediaById(id);
 
     /// <summary>
     /// Get a media by id
@@ -62,7 +45,7 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// The media with the given id
     /// </returns>
     [HttpGet("byAuthor/{id}")]
-    public async Task<ActionResult<IEnumerable<Media?>>> GetByAuthorId(Guid id)
+    public async Task<ActionResult<IEnumerable<Media?>>> GetByAuthorId(uint id)
     {
 		return Ok(await repository.GetMediaByAuthorId(id));
     }
@@ -75,27 +58,25 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// The added Product
     /// </returns>
     [HttpPut]
-    public async Task<ActionResult<Media>> Create([FromForm] Media media)
+	[Authorize]
+    public async Task<ActionResult<Media>> Create([FromForm] Media media, [FromForm] IFormFile file)
     {		
-		if ( 
-			! Request.HasFormContentType || 
-			Request.Form.Files.Where(f => acceptedTypes.Contains(f.ContentType)).FirstOrDefault() is not IFormFile file
-		)
+		if ( !CheckFileValidity(file) )
 		{
 			return BadRequest("No correct file attached");
 		}
 
-        if ( !IsAuthValid(Request, out JWT token) )
+        if ( ! VerifyAuthZ(out uint id, out ActionResult<Media> error) )
 		{
-            return Unauthorized();
-        }
+			return error;
+		}
 
 		// TODO: Implement file analysis to check if a file already exists.
 
         await repository.CreateMedia( media = media with
 			{
-				Id = Guid.NewGuid(),
-				Author = token.GetDecodedPayload().user.Id,
+				Id = repository.NewId,
+				AuthorId = id,
 			},
 			file
 		);
@@ -113,14 +94,9 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// The updated media
     /// </returns>
     [HttpPut("{id}")]
-    public async Task<ActionResult<Media>> Update(string id, [FromForm] Media media)
+    public async Task<ActionResult<Media>> Update(uint id, [FromForm] Media media)
     {
-        if ( ! Guid.TryParse(id, out Guid guid) && guid == Guid.Empty)
-        {
-            return BadRequest();
-        }
-		
-		Media? currentProduct = await repository.GetMediaById(guid);
+		Media? currentProduct = await repository.GetMediaById(id);
 		if ( currentProduct is null )
 		{
 			return NotFound();
@@ -129,7 +105,7 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
         Media? result = await repository.UpdateMedia(currentProduct.Id, media with 
 			{
 				Id = currentProduct.Id,
-				Author = currentProduct.Author,
+				AuthorId = currentProduct.AuthorId,
 				Name = media.Name ?? currentProduct.Name,
 				Description = media.Description ?? currentProduct.Description,
 			}
@@ -152,25 +128,20 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// <response code="404">The media was not found</response>
     /// <response code="400">The id was 0</response>
     [HttpDelete]
-    public async Task<ActionResult> Delete([FromQuery] string id)
-    {
-        if ( ! Guid.TryParse(id, out Guid guid) || guid == Guid.Empty)
-        {
-            return BadRequest();
-        }
-		
-        Media? media = await repository.GetMediaById(guid);
+    public async Task<ActionResult<Media>> Delete([FromQuery] uint id)
+    {		
+        Media? media = await repository.GetMediaById(id);
 		if ( media is null )
 		{
 			return NotFound();
 		}
 
-		if ( ! IsAuthValid(Request, out JWT token) || (! token.GetDecodedPayload().user.Admin && token.GetDecodedPayload().user.Id != media.Author))
+        if ( ! VerifyOwnershipOrAuthZ(media.AuthorId, out ActionResult<Media> error) )
 		{
-			return Unauthorized();
+			return error;
 		}
 
-		await repository.DeleteMedia(guid);
+		await repository.DeleteMedia(id);
         repository.SaveChanges();
         return Ok(media);
     }

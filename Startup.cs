@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 
-namespace ApiSevenet;
+namespace Kredit;
 public class Startup(IConfiguration Configuration)
 {
 

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ApiSevenet;
+namespace Kredit;
 
 public abstract class Repository<T> where T : class {
 
@@ -28,5 +28,4 @@ public abstract class Repository<T> where T : class {
 
 
     public abstract void SaveChanges();
-
 }

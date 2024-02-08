@@ -1,11 +1,7 @@
-using ApiSevenet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-
-namespace ApiSevenet;
+namespace Kredit;
 
 [ApiController]
 [Route("api/users")]

@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.FileProviders;
 
-namespace ApiSevenet;
+namespace Kredit;
 
 [ApiController]
 [Route("api/media")]

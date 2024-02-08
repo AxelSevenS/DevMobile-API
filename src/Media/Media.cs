@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace ApiSevenet;
+namespace Kredit;
 
 public record Media
 {

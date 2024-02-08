@@ -1,8 +1,7 @@
 using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ApiSevenet;
+namespace Kredit;
 
 public abstract class Controller<T, TData>(T repository) : ControllerBase where T : Repository<TData> where TData : class
 {

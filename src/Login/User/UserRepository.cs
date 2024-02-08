@@ -1,10 +1,6 @@
-using System.Security.Cryptography;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 
-
-namespace ApiSevenet;
+namespace Kredit;
 
 public class UserRepository : Repository<User>
 {

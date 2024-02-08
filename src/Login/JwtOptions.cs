@@ -9,6 +9,7 @@ namespace Kredit;
 public record class JwtOptions
 {
     public const string Jwt = "Jwt";
+	public static readonly string RoleClaim = "roles";
 
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;
@@ -40,8 +41,8 @@ public record class JwtOptions
 		List<Claim> claims =
 		[
 			new Claim(JwtRegisteredClaimNames.Name, user.Username),
-			new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-			new Claim(ClaimTypes.Role, user.Admin ? "Admin" : "Client"),
+			new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+			new Claim(RoleClaim, user.Admin ? "Admin" : "Client"),
 
 			new Claim(JwtRegisteredClaimNames.Iss, Issuer),
 			new Claim(JwtRegisteredClaimNames.Aud, Audience),

@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Kredit;
 public class Startup(IConfiguration Configuration)
@@ -23,12 +24,14 @@ public class Startup(IConfiguration Configuration)
 			options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
 		})
 			.AddJwtBearer(options => 
-			{			
+			{
 				#if DEBUG
 					options.RequireHttpsMetadata = false;
 				#else
 					options.RequireHttpsMetadata = true;
 				#endif
+				
+				options.MapInboundClaims = false;
 			
 				options.SaveToken = true;
 				options.TokenValidationParameters = new TokenValidationParameters
@@ -52,8 +55,9 @@ public class Startup(IConfiguration Configuration)
 			.AddDefaultPolicy("Authenticated", policy =>
 			{
 				policy.RequireAuthenticatedUser();
-				policy.RequireClaim(ClaimTypes.NameIdentifier);
-				policy.RequireClaim(ClaimTypes.Role);
+				policy.RequireClaim(JwtRegisteredClaimNames.Name);
+				policy.RequireClaim(JwtRegisteredClaimNames.Sub);
+				policy.RequireClaim(JwtOptions.RoleClaim);
 			});
     }
 

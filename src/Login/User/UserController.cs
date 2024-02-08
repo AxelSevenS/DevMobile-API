@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,7 +48,7 @@ public class UserController(UserRepository repo, JwtOptions jwtOptions) : Contro
 		password = jwtOptions.HashPassword(password);
 		return await repository.GetUserByUsernameAndPassword(username, password) switch
         {
-            User user => Ok( jwtOptions.GenerateFrom(user).Write() ),
+            User user => Ok( JsonSerializer.Serialize(jwtOptions.GenerateFrom(user).Write()) ),
             null => NotFound(),
         };
 	}

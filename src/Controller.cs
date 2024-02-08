@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,8 +16,9 @@ public abstract class Controller<T, TData>(T repository) : ControllerBase where 
 	protected bool TryGetAuthenticatedUserId(out uint id)
 	{
 		id = 0;
+		Console.WriteLine(string.Join(", ", HttpContext.User.Claims));
 		if (
-			HttpContext.User.FindFirst(ClaimTypes.NameIdentifier) is Claim claim && 
+			HttpContext.User.FindFirst(JwtRegisteredClaimNames.Sub) is Claim claim && 
 			uint.TryParse(claim.Value, out id)
 		)
 		{
@@ -51,7 +53,7 @@ public abstract class Controller<T, TData>(T repository) : ControllerBase where 
 			result = Unauthorized();
 			return false;
 		}
-		if ( ! HttpContext.User.IsInRole("Admin") )
+		if ( HttpContext.User.FindFirstValue(JwtOptions.RoleClaim) is not string roles || roles != "Admin" )
 		{
 			result = Forbid();
 			return false;
@@ -78,7 +80,7 @@ public abstract class Controller<T, TData>(T repository) : ControllerBase where 
 			result = Unauthorized();
 			return false;
 		}
-		if ( authId != currentId && ! HttpContext.User.IsInRole("Admin") )
+		if ( authId != currentId && (HttpContext.User.FindFirstValue(JwtOptions.RoleClaim) is not string roles || roles != "Admin") )
 		{
 			result = Forbid();
 			return false;

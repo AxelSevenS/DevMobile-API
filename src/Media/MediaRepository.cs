@@ -74,7 +74,7 @@ public class MediaRepository : Repository<Media>
     /// </returns>
     public async Task<Media?> CreateMedia(Media product, IFormFile file)
     {
-		product.Extension = Path.GetExtension(file.FileName);
+		product.Extension = Path.GetExtension(file.FileName)[1..];
 
 		Directory.CreateDirectory(fileDirectory);
 		string path = Path.Combine(fileDirectory, product.GetFileName());
@@ -127,13 +127,13 @@ public class MediaRepository : Repository<Media>
     /// </returns>
     public async Task<Media?> DeleteMedia(uint id)
     {
-        Media? product = await GetMediaById(id);
-        if (product is not null)
+        Media? media = await GetMediaById(id);
+        if (media is not null)
         {
-			File.Delete(Path.Combine(fileDirectory, product.GetFileName()));
-            Data.Remove(product);
+			File.Delete(Path.Combine(fileDirectory, media.GetFileName()));
+            Data.Remove(media);
         }
 
-        return product;
+        return media;
     }
 }

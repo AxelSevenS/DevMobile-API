@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -104,44 +105,23 @@ public class UserController(UserRepository repo, JwtOptions jwtOptions) : Contro
 			return error;
 		}
 
+
 		User? current = await repository.GetUserById(id);
         if ( current is null )
         {
             return NotFound();
         }
+        if ((await repository.GetUsers()).Any(u => u.Username == user.Username && u.Id != user.Id))
+        {
+            return BadRequest("Username already taken");
+        }
 
-		User? updated = await repository.PutUserById(id, current.WithUpdatesFrom(user) );
+        bool isAdmin = HttpContext.User.FindFirstValue(JwtOptions.RoleClaim) is string roles && roles == "Admin";
+
+		User? updated = await repository.PutUserById(id, current.WithUpdatesFrom(user, isAdmin) );
 
         repository.SaveChanges();
         return Ok(updated);
-    }
-
-    /// <summary>
-    /// Update a user's authorizations
-    /// </summary>
-    /// <param name="id">The id of the user</param>
-    /// <param name="user">The user to update</param>
-    /// <returns>
-    /// The updated user
-    /// </returns>
-    [HttpPut("auths/{id}")]
-	[Authorize]
-    public async Task<ActionResult<User>> UpdateUserAuths(uint id, [FromForm] bool admin)
-    {
-		if ( ! VerifyOwnershipOrAuthZ(id, out ActionResult<User> error))
-		{
-			return error;
-		}
-
-		User? current = await repository.GetUserById(id);
-        if ( current is null )
-        {
-            return NotFound();
-        }
-		current.Admin = admin;
-
-        repository.SaveChanges();
-        return Ok(current);
     }
 
     /// <summary>

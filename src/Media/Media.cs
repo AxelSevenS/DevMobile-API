@@ -7,7 +7,7 @@ public record Media
 	[JsonPropertyName("id")]
     public uint Id { get; set; }
 
-	[JsonPropertyName("author-id")]
+	[JsonPropertyName("authorId")]
     public uint AuthorId { get; set; }
 	
 	[JsonPropertyName("name")]
@@ -22,6 +22,6 @@ public record Media
 
 	public string GetFileName()
 	{
-		return $"{Id}{Extension}";
+		return $"{Id}.{Extension}";
 	}
 }

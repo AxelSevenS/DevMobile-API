@@ -16,13 +16,13 @@ public class UserRepository : Repository<User>
 	{
 		JwtOptions = jwtOptions;
 		Task.Run(async () => {
-			if ( ! Data.Any(u => ! u.Admin) )
+			if ( ! Data.Any(u => ! u.Roles.Contains("Admin")) )
 			{
 				await PostUser(new()
 				{
 					Username = "Admin",
 					Password = JwtOptions.HashPassword("AdminPassword"),
-					Admin = true,
+					Roles = "Admin",
 				});
 			}
 			SaveChanges();

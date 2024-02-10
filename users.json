@@ -1,1 +1,1 @@
-[{"id":1,"username":"Admin","password":"BLDFGtJzHqqT/b7eNbl4ph9dLpjnyeqr3UzeEMz5y4Y=","admin":true},{"id":2,"username":"Username","password":"DdTzpnd4hV\u002ByQRcSpRZ595WU4qrQZhPjnH58RJWv1Ew=","admin":false}]
+[{"id":1,"username":"AdminTest2","password":"WK/X2DXDWzAEje/tENvfKvq0LKlqy6pNl\u002BPUQjTcmJA=","roles":"Admin"},{"id":2,"username":"Username","password":"DdTzpnd4hV\u002ByQRcSpRZ595WU4qrQZhPjnH58RJWv1Ew=","roles":"Client"},{"id":3,"username":"TestUser","password":"29wQqs7IJvrTDvS6VheF6UaJ8j4PNTfTsL\u002B6MwV918o=","roles":"Client"}]

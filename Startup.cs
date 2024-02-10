@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -75,13 +76,13 @@ public class Startup(IConfiguration Configuration)
         }
 
         app.UseHttpsRedirection();
-        // app.UseStaticFiles(
-        //     new StaticFileOptions
-        //     {
-        //         FileProvider = new PhysicalFileProvider( Path.Combine(Directory.GetCurrentDirectory(), "Resources") ),
-        //         RequestPath = "/Resources"
-        //     }
-        // );
+        app.UseStaticFiles(
+            new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider( Path.Combine(Directory.GetCurrentDirectory(), "Resources") ),
+                RequestPath = "/Resources"
+            }
+        );
 
 
         app.UseRouting();

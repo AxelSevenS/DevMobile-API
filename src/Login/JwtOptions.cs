@@ -42,7 +42,7 @@ public record class JwtOptions
 		[
 			new Claim(JwtRegisteredClaimNames.Name, user.Username),
 			new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-			new Claim(RoleClaim, user.Admin ? "Admin" : "Client"),
+			new Claim(RoleClaim, user.Roles),
 
 			new Claim(JwtRegisteredClaimNames.Iss, Issuer),
 			new Claim(JwtRegisteredClaimNames.Aud, Audience),

@@ -58,24 +58,26 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// </returns>
     [HttpPut]
 	[Authorize]
-    public async Task<ActionResult<Media>> Create([FromForm] Media media, [FromForm] IFormFile file)
+    public async Task<ActionResult<Media>> Create([FromForm] string name, [FromForm] string description, [FromForm] IFormFile file)
     {		
 		if ( !CheckFileValidity(file) )
 		{
 			return BadRequest("No correct file attached");
 		}
 
-        if ( ! VerifyAuthZ(out uint id, out ActionResult<Media> error) )
+        if ( ! TryGetAuthenticatedUserId(out uint id) )
 		{
-			return error;
+			return Unauthorized();
 		}
 
 		// TODO: Implement file analysis to check if a file already exists.
 
-        await repository.CreateMedia( media = media with
+        Media? media = await repository.CreateMedia( new()
 			{
 				Id = repository.NewId,
 				AuthorId = id,
+                Name = name,
+                Description = description,
 			},
 			file
 		);
@@ -93,6 +95,7 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// The updated media
     /// </returns>
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<ActionResult<Media>> Update(uint id, [FromForm] Media media)
     {
 		Media? currentProduct = await repository.GetMediaById(id);
@@ -101,14 +104,12 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
 			return NotFound();
 		}
 
-        Media? result = await repository.UpdateMedia(currentProduct.Id, media with 
-			{
-				Id = currentProduct.Id,
-				AuthorId = currentProduct.AuthorId,
-				Name = media.Name ?? currentProduct.Name,
-				Description = media.Description ?? currentProduct.Description,
-			}
-		);
+        if ( ! VerifyOwnershipOrAuthZ(media.AuthorId, out ActionResult<Media> error) )
+		{
+			return error;
+		}
+
+        Media? result = await repository.UpdateMedia(currentProduct.Id, media);
         if ( result is null )
         {
             return NotFound();
@@ -126,8 +127,9 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// <response code="200">The media was deleted</response>
     /// <response code="404">The media was not found</response>
     /// <response code="400">The id was 0</response>
-    [HttpDelete]
-    public async Task<ActionResult<Media>> Delete([FromQuery] uint id)
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<ActionResult<Media>> Delete(uint id)
     {		
         Media? media = await repository.GetMediaById(id);
 		if ( media is null )

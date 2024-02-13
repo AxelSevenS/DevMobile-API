@@ -134,8 +134,9 @@ public class UserRepository : Repository<User>
             {
                 oldUser = Data[Data.IndexOf(oldUser)] = oldUser with
                 {
-                    Username = user.Username ?? oldUser.Username,
-                    Password = user.Password is string newPass ? JwtOptions.HashPassword(newPass) : oldUser.Password,
+                    Username = user.Username,
+                    Password = JwtOptions.HashPassword(user.Password),
+                    Roles = user.Roles,
                 };
             }
 

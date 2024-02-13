@@ -94,12 +94,18 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
     /// <returns>
     /// The updated media
     /// </returns>
-    [HttpPut("{id}")]
+    [HttpPatch("{id}")]
     [Authorize]
-    public async Task<ActionResult<Media>> Update(uint id, [FromForm] Media media)
+    public async Task<ActionResult<Media>> Update(uint id, [FromForm] uint? authorId, [FromForm] string? name, [FromForm] string? description)
     {
-		Media? currentProduct = await repository.GetMediaById(id);
-		if ( currentProduct is null )
+
+        if (authorId is null && name is null && description is null)
+        {
+            return BadRequest();
+        }
+
+		Media? media = await repository.GetMediaById(id);
+		if ( media is null )
 		{
 			return NotFound();
 		}
@@ -109,7 +115,13 @@ public class MediaController(MediaRepository repository) : Controller<MediaRepos
 			return error;
 		}
 
-        Media? result = await repository.UpdateMedia(currentProduct.Id, media);
+        Media? result = await repository.UpdateMedia(media.Id, media with
+        {
+            AuthorId = authorId ?? media.AuthorId,
+            Name = name ?? media.Name,
+            Description = description ?? media.Description
+        });
+
         if ( result is null )
         {
             return NotFound();

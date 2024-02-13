@@ -91,11 +91,11 @@ public class UserController(UserRepository repo, JwtOptions jwtOptions) : Contro
     /// <returns>
     /// The updated user
     /// </returns>
-    [HttpPut("{id}")]
+    [HttpPatch("{id}")]
 	[Authorize]
-    public async Task<ActionResult<User>> UpdateUser(uint id, [FromForm] User user)
+    public async Task<ActionResult<User>> UpdateUser(uint id, [FromForm] string? username, [FromForm] string? password, [FromForm] string? roles)
     {
-        if (user is null)
+        if (username is null && password is null && roles is null)
         {
             return BadRequest();
         }
@@ -111,14 +111,19 @@ public class UserController(UserRepository repo, JwtOptions jwtOptions) : Contro
         {
             return NotFound();
         }
-        if ((await repository.GetUsers()).Any(u => u.Username == user.Username && u.Id != user.Id))
+        if ((await repository.GetUsers()).Any(u => u.Username == username && u.Id != id))
         {
             return BadRequest("Username already taken");
         }
 
-        bool isAdmin = HttpContext.User.FindFirstValue(JwtOptions.RoleClaim) is string roles && roles == "Admin";
+        bool isAdmin = HttpContext.User.FindFirstValue(JwtOptions.RoleClaim) is string authenticatedRoles && authenticatedRoles == "Admin";
 
-		User? updated = await repository.PutUserById(id, current.WithUpdatesFrom(user, isAdmin) );
+		User? updated = await repository.PutUserById(id, current with
+        {
+            Username = username ?? current.Username,
+            Password = password ?? current.Password,
+            Roles = roles is not null && isAdmin ? roles : current.Roles
+        });
 
         repository.SaveChanges();
         return Ok(updated);
